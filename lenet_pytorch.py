@@ -27,6 +27,7 @@ class LeNet(nn.Module):
 
 
 def train(net, optimizer, data_loader, device):
+    net.train()
     for (idx, (x, t)) in enumerate(data_loader):
         optimizer.zero_grad()
         x = net.forward(x.to(device))
@@ -40,22 +41,27 @@ def test(net, data_loader, device):
     top1 = 0  # TODO compute top1
     correct_samples = 0
     total_samples = 0
-    for (idx, (x, t)) in enumerate(data_loader):
-        x = net.forward(x.to(device))
-        t = t.to(device)
-        _, indices = torch.max(x, 1)
-        correct_samples += torch.sum(indices == t)
-        total_samples += t.shape[0]
+    net.eval()
+    with torch.no_grad():
+        for (idx, (x, t)) in enumerate(data_loader):
+            x = net.forward(x.to(device))
+            t = t.to(device)
+            _, indices = torch.max(x, 1)
+            correct_samples += torch.sum(indices == t)
+            total_samples += t.shape[0]
 
     top1 = float(correct_samples) / total_samples
     return top1
 
 
 if __name__ == "__main__":
-    nb_epoch = 20
+    nb_epoch = 1
     batch_size_train = 100
     batch_size_test = 1000
     device = "cuda"  # change to 'cpu' if needed
+
+    best_model = None
+    best_acc = 0
 
     train_loader = torch.utils.data.DataLoader(
         torchvision.datasets.MNIST(
@@ -95,3 +101,8 @@ if __name__ == "__main__":
         train(net, optimizer, train_loader, device)
         test_top1 = test(net, test_loader, device)
         print(f"Epoch {epoch}. Top1 {test_top1:.4f}")
+        if test_top1 > best_acc:
+            best_model = net
+            best_acc = test_top1
+
+    torch.save(best_model.state_dict(), "models/best_acc.pth")
