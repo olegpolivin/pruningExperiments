@@ -1,9 +1,6 @@
 import numpy as np
 import torch
 
-from .flops import flops
-from .size import model_size
-
 
 def nonzero(tensor):
     """Returns absolute number of values different from 0
@@ -35,3 +32,7 @@ dtype2bits = {
     torch.long: 64,
     torch.bool: 1,
 }
+
+
+from .flops import flops
+from .size import model_size

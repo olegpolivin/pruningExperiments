@@ -79,6 +79,7 @@ class PruningExperiment:
                 mask = strategy(module, name=name, amount=amount, n=n, dim=dim)
             else:
                 mask = strategy(module, name=name, amount=amount, n=n, dim=dim)
+            # print(modulename, mask.weight_mask.shape)
             module.set_mask(mask.weight_mask)
 
         return net

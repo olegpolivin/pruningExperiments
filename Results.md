@@ -1,6 +1,9 @@
 # Experiments in Neural Network pruning
 
-Let's define metrics that we will use to evaluate the effectiveness of pruning. We will look at categorical accuracy to estimate the quality of a neural network.<sup>[1](#myfootnote1)</sup>
+### Prepared by Oleg Polivin, 25 November 2020
+---
+
+Let's define metrics that we will use to evaluate the effectiveness of pruning. We will look at categorical accuracy to estimate the quality of a neural network.<sup>[1](#myfootnote1)</sup> Accuracy in the experiments is reported based on the test set, not the one that zas used for training the neural network.
 
 
 Much of this work takes from the paper [What is the State of Neural Network Pruning?](https://arxiv.org/abs/2003.03033)
@@ -65,6 +68,12 @@ Setting: Prune fully-connected layers (``fc1``, ``fc2``) and both convolutional 
 Setting: Same as in experiment 1. Notice the change that now pruning is not random. Here I assign 0's to the most smallest weights.
 
 #### Experiment 3: Structured pruning (based on the L1 norm)
+
+Setting: Here I use structured pruning. In PyTorch one can use ``prune.ln_structured`` for that. It is possible to pass a dimension (``dim``) to specify which channel should be dropped. For fully-connected layers as ``fc1`` or ``fc2`` -> ``dim==0`` corresponds to "switching off" output neurons (like ``320`` for ``fc1`` and ``10`` for ``fc2``). Therefore, it does not really make sense to switch off neurons in the classification layer ``fc2``. For convolutional layers like ``conv1`` or ``conv2`` -> ``dim==0`` corresponds to removing the output channels of the layers (like ``10`` for ``conv1`` and ``20`` for ``conv2``). That's why I will only prune ``fc1``, ``conv1`` and ``conv2`` layers, again going from pruning 10% of the layers channels up to 70%. For instance, for the fully-connected layers it means zeroing 5 up to 35 neurons out of 50. For ``conv1`` layer it means zeroing out all the connections corresponding to 1 up to 7 channels.
+
+Below I present results of my pruning experiments:
+
+![Imagine a LeNet-5 architecture](imgs/pruningResults.png "Pruning Results")
 
 ## Caveats
 
