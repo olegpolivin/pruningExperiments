@@ -34,7 +34,8 @@ class PruningExperiment:
         pruning_strategy=None,
         batch_size_train=512,
         batch_size_test=1024,
-        epochs_finetune=10,
+        epochs_prune_finetune=3,
+        epochs_finetune=5,
         device="cuda",
         save_model=None,
     ):
@@ -53,6 +54,7 @@ class PruningExperiment:
         self.device = device
         self.batch_size_train = batch_size_train
         self.batch_size_test = batch_size_test
+        self.epochs_prune_finetune = epochs_prune_finetune
         self.epochs_finetune = epochs_finetune
         self.save_model = save_model
 
@@ -68,11 +70,17 @@ class PruningExperiment:
 
     def prune_model(self, net, pruning_strategy):
 
-        for modulename, strategy, name, amount in pruning_strategy:
+        for modulename, strategy, name, amount, kwargs in pruning_strategy:
+
             module = getattr(net, modulename)
-            mask = strategy(module, name=name, amount=amount)
+            if kwargs:
+                n = kwargs["n"]
+                dim = kwargs["dim"]
+                mask = strategy(module, name=name, amount=amount, n=n, dim=dim)
+            else:
+                mask = strategy(module, name=name, amount=amount, n=n, dim=dim)
             module.set_mask(mask.weight_mask)
-            prune.remove(module, name)
+
         return net
 
     def train(self, net, optimizer, data_loader, device):
@@ -110,6 +118,7 @@ class PruningExperiment:
 
         FLOPS = flops(net, x)
         compression_ratio = size / size_nz
+
         return FLOPS, compression_ratio
 
     def run(self):
@@ -119,28 +128,36 @@ class PruningExperiment:
         pruning_strategy = self.pruning_strategy
         batch_size_train = self.batch_size_train
         batch_size_test = self.batch_size_test
+        epochs_prune_finetune = self.epochs_prune_finetune
         epochs_finetune = self.epochs_finetune
         device = self.device
 
         net = self.load_model()
-        if pruning_strategy is not None:
-            net = self.prune_model(net, pruning_strategy)
+
         optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
 
         train_loader, test_loader = get_loaders(batch_size_train, batch_size_test)
 
-        test_top1 = self.test(net, test_loader, device)
-        print(f"Categorical accuracy right after pruning is {test_top1}.\n")
-
-        print("Finetuning pruned model")
+        print("Pruning cycle")
         print("=======================")
-        for epoch in range(epochs_finetune):
-            self.train(net, optimizer, train_loader, device)
+        for epoch in range(epochs_prune_finetune):
+            if pruning_strategy is not None:
+                net = self.prune_model(net, pruning_strategy)
             test_top1 = self.test(net, test_loader, device)
-            print(f"Epoch FineTuning {epoch}. Top1 {test_top1:.4f}")
-        # module = net.fc1
-        # print(torch.sum(torch.is_nonzero(net.fc1.weight)/np.prod(net.fc1.weight.shape))
-        # print(list(module.named_parameters())[1])
+            print(f"After pruning: Epoch {epoch}. Top1 {test_top1}.")
+            for finetune_epoch in range(epochs_finetune):
+                self.train(net, optimizer, train_loader, device)
+                test_top1 = self.test(net, test_loader, device)
+                print(
+                    f"\tAfter finetuning: Epoch {finetune_epoch}.\
+                        Top1 {test_top1:.4f}"
+                )
+
+        for modulename, strategy, name, amount, kwargs in pruning_strategy:
+            module = getattr(net, modulename)
+            prune.remove(module, name)
+        test_top1 = self.test(net, test_loader, device)
+
         FLOPS, compression_ratio = self.calculate_prune_metrics(
             net, test_loader, device
         )
@@ -148,4 +165,4 @@ class PruningExperiment:
         if self.save_model is not None:
             torch.save(net.state_dict(), f"models/{self.save_model}.pth")
 
-        return test_top1, FLOPS, compression_ratio
+        return test_top1, FLOPS[0] / FLOPS[1], compression_ratio

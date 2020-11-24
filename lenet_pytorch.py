@@ -55,9 +55,9 @@ def test(net, data_loader, device):
 
 
 if __name__ == "__main__":
-    nb_epoch = 1
-    batch_size_train = 100
-    batch_size_test = 1000
+    nb_epoch = 80
+    batch_size_train = 1024
+    batch_size_test = 5120
     device = "cuda"  # change to 'cpu' if needed
 
     best_model = None

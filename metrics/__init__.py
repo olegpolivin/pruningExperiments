@@ -1,6 +1,9 @@
 import numpy as np
 import torch
 
+from .flops import flops
+from .size import model_size
+
 
 def nonzero(tensor):
     """Returns absolute number of values different from 0

@@ -91,11 +91,11 @@ def get_activations(model, input):
 def get_gradients(model, inputs, outputs):
     # TODO implement using model.register_backward_hook()
     # So it is harder than it seems, the grad_input contains also the gradients
-    # with respect to the weights and so far order seems to be (bias, input, weight)
-    # which is confusing
-    # Moreover, a lot of the time the output activation we are looking for is the
-    # one after the ReLU and F.ReLU (or any functional call) will not be called by
-    # the forward or backward hook
+    # with respect to the weights and so far order seems to be
+    # (bias, input, weight) which is confusing.
+    # Moreover, a lot of the time the output activation we are
+    # looking for is the one after the ReLU and F.ReLU (or any functional call)
+    # will not be called by the forward or backward hook
     # Discussion here
     # https://discuss.pytorch.org/t/how-to-register-hook-function-for-functional-form/25775
     # Best way seems to be monkey patching F.ReLU & other functional ops
@@ -147,10 +147,12 @@ def fraction_to_keep(compression, model, prunable_modules):
     Arguments:
         compression {float} -- Desired overall compression
         model {torch.nn.Module} -- Full model for which to compute the fraction
-        prunable_modules {List(torch.nn.Module)} -- Modules that can be pruned in the model.
+        prunable_modules {List(torch.nn.Module)} --
+        Modules that can be pruned in the model.
 
     Returns:
-        {float} -- Fraction of prunable parameters to keep to achieve desired compression
+        {float} -- Fraction of prunable parameters to keep
+        to achieve desired compression
     """
     from ..metrics import model_size
 
@@ -159,7 +161,8 @@ def fraction_to_keep(compression, model, prunable_modules):
     nonprunable_size = total_size - prunable_size
     fraction = 1 / prunable_size * (total_size / compression - nonprunable_size)
     assert 0 < fraction <= 1, (
-        f"Cannot compress to {1/compression} model with {nonprunable_size/total_size}"
+        f"Cannot compress to {1/compression} model\
+            with {nonprunable_size/total_size}"
         + "fraction of unprunable parameters"
     )
     return fraction
