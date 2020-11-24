@@ -73,7 +73,7 @@ Setting: Here I use structured pruning. In PyTorch one can use ``prune.ln_struct
 
 Below I present results of my pruning experiments:
 
-![Imagine a LeNet-5 architecture](imgs/pruningResults.png "Pruning Results")
+![Pruning results were here](imgs/pruningResults.png "Pruning Results")
 
 ## Caveats
 
