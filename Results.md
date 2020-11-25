@@ -100,6 +100,35 @@ What's said above is more relevant to unstructured pruning of weights.
 
 One can have speed-ups when using structured pruning, that is, for example, dropping some channels. The price for that would be a drop in accuracy, but at least this really works for better model size and speed-ups.
 
+## Additional chapter: Knowledge distillation
+
+Knowledge distillation is the idea proposed by Geoffrey Hinton, Oriol Vinyals and Jeff Dean to tranfer knowledge from a huge trained model to a simple and light-weighted one. It is not strictly speaking pruning, but has the same objective: simplify the original neural network without sacrifying much of quality.
+
+It works the following way:
+
+- Train a comprehensive large network which has a good accuracy [Teacher Network]
+- Train a small network until convergence [Student Network]. There will be trade-offs between accuracy that you reach with a simpler model and the level of compression.
+- Distill the knowledge from the Teacher Network by training the Student Network using the outputs of the Teacher Network.
+- See that original accuracy of the trained and converged student network is increased!
+
+I provide the code to do it in the ``knowledge_distillation`` folder. Run
+
+```
+python knowledge_distillation/train_student.py 
+```
+to train the student network. It has a simplified architecture relative to the original ``LeNet`` neural network. For example, when the trained student network is saved it takes twice less memory on disk (from 90 kBs to 45 kBs). Run
+
+```
+python knowledge_distillation/distillation.py
+```
+to do additional training of the converged student neural network distilling teacher network.
+
+Here are the results:
+- ``FLOPS`` compression coefficient is 32 (the student model is 32 times smaller in terms of FLOPS).
+- ``Model size`` compression coefficient is 2 (the student model is 2 times smaller in terms of size)
+- ``Accuracy`` of the retrained student model is 0.9718, only ~ 1% lower than the original one.
+
+I would say that knowledge distillation is definitely worth a try as a method to perform model compression.
 
 ## Bibliography with comments
 
@@ -112,7 +141,13 @@ One can have speed-ups when using structured pruning, that is, for example, drop
 
 3. Next, I make use of the [PyTorch Pruning Tutorial](https://pytorch.org/tutorials/intermediate/pruning_tutorial.html). It is different from the implementations above. My implementation mixes the code of the above two implementations with PyTorch way.
 
-4. Open Data Science community (``ods.ai``) is my source of inspiration with brilliant people sharing their ideas on many aspects of Data Science.
+Sources on knowledge distillation:
+
+4. [Dark knowledge](https://www.ttic.edu/dl/dark14.pdf)
+
+5. [Distilling the Knowledge in a Neural Network](https://arxiv.org/abs/1503.02531)
+
+6. Open Data Science community (``ods.ai``) is my source of inspiration with brilliant people sharing their ideas on many aspects of Data Science.
 
 ## Footnotes
 <a name="myfootnote1">1</a>: Indeed, at the extreme we can just predict a constant. Accuracy will be low, but prunning will be very effective, there will be no parameters at all in the neural network.
