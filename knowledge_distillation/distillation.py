@@ -52,11 +52,11 @@ def calculate_prune_metrics(net, test_loader, device):
 
 def cross_entropy_with_soft_targets(pred, soft_targets):
     logsoftmax = nn.LogSoftmax(dim=1)
-    return torch.mean(torch.sum(- soft_targets * logsoftmax(pred), 1))
+    return torch.mean(torch.sum(-soft_targets * logsoftmax(pred), 1))
 
 
 class CrossEntropyLossTemperature_withSoftTargets(torch.nn.Module):
-    def __init__(self, temperature, reduction='mean'):
+    def __init__(self, temperature, reduction="mean"):
         super(CrossEntropyLossTemperature_withSoftTargets, self).__init__()
         self.T = temperature
         self.reduction = reduction
@@ -68,14 +68,19 @@ class CrossEntropyLossTemperature_withSoftTargets(torch.nn.Module):
         constructor as well as arbitrary operators on Tensors.
         """
         z = input / self.T
-        loss_1 = self.T**2*cross_entropy_with_soft_targets(
-            z,
-            F.softmax(soft_targets, 1, _stacklevel=5))
+        loss_1 = self.T ** 2 * cross_entropy_with_soft_targets(
+            z, F.softmax(soft_targets, 1, _stacklevel=5)
+        )
 
-        loss_2 = F.cross_entropy(input, hard_targets, weight=None,
-                                 ignore_index=-100, reduction=self.reduction)
+        loss_2 = F.cross_entropy(
+            input,
+            hard_targets,
+            weight=None,
+            ignore_index=-100,
+            reduction=self.reduction,
+        )
 
-        return loss_1+loss_2
+        return loss_1 + loss_2
 
 
 if __name__ == "__main__":
@@ -91,18 +96,13 @@ if __name__ == "__main__":
     batch_size_test = 1024
     nb_epoch = 20
 
-    train_loader, test_loader = get_loaders(
-        batch_size_train,
-        batch_size_test)
+    train_loader, test_loader = get_loaders(batch_size_train, batch_size_test)
 
     print(calculate_prune_metrics(teacher, test_loader, device))
     print(calculate_prune_metrics(student, test_loader, device))
 
     loss_fn = CrossEntropyLossTemperature_withSoftTargets(1)
-    optimizer = torch.optim.Adam(
-        student.parameters(),
-        lr=0.0001,
-        weight_decay=0.00001)
+    optimizer = torch.optim.Adam(student.parameters(), lr=0.0001, weight_decay=0.00001)
 
     best_model = None
     best_acc = 0
@@ -116,6 +116,4 @@ if __name__ == "__main__":
             best_model = student
             best_acc = test_top1
 
-    torch.save(
-        best_model.state_dict(),
-        "models/best_acc_student_with_distillation.pth")
+    torch.save(best_model.state_dict(), "models/best_acc_student_with_distillation.pth")

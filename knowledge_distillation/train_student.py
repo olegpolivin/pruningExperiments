@@ -44,9 +44,7 @@ if __name__ == "__main__":
     batch_size_test = 1024
     nb_epoch = 20
 
-    train_loader, test_loader = get_loaders(
-        batch_size_train,
-        batch_size_test)
+    train_loader, test_loader = get_loaders(batch_size_train, batch_size_test)
 
     loss_fn = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
