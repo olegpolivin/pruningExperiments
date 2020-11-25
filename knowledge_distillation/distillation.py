@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-from metrics import flops, model_size
-from loaders import get_loaders
 from student import LeNet, LeNetStudent
+
+from loaders import get_loaders
+from metrics import flops, model_size
 
 
 def train(teacher, student, loss_fn, optimizer, data_loader, device):
