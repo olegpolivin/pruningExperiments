@@ -3,10 +3,10 @@
 ### Prepared by Oleg Polivin, 25 November 2020
 ---
 
-Let's define metrics that we will use to evaluate the effectiveness of pruning. We will look at categorical accuracy to estimate the quality of a neural network.<sup>[1](#myfootnote1)</sup> Accuracy in the experiments is reported based on the test set, not the one that zas used for training the neural network.
+Let's define metrics that we will use to evaluate the effectiveness of pruning. We will look at categorical accuracy to estimate the quality of a neural network.<sup>[1](#myfootnote1)</sup> Accuracy in the experiments is reported based on the test set, not the one that has been used for training the neural network.
 
 
-Much of this work takes from the paper [What is the State of Neural Network Pruning?](https://arxiv.org/abs/2003.03033)
+Much of this work is based on the paper [What is the State of Neural Network Pruning?](https://arxiv.org/abs/2003.03033)
 
 And to estimate the effectiveness at pruning we will take into account:
 
@@ -23,7 +23,7 @@ Given the code for LeNet model in PyTorch, let's calculate the metrics defined a
 
 ![Imagine a LeNet-5 architecture](imgs/Architecture-of-LeNet-5.png "LeNet-5 architecture")
 
-Original paper is a bit different from the code given (for example, there was no ``Dropout``, ``hyperbolic tangent`` was used as an activation, number of filters is different, etc), but the idea is the same. I will organize experiments as follows:
+Architecture in the original paper [Gradient-Based Learning Applied to Document Recognition](http://yann.lecun.com/exdb/publis/pdf/lecun-98.pdf) is a bit different from the code given (for example, there was no ``Dropout``, ``hyperbolic tangent`` was used as an activation, number of filters is different, etc), but the idea is the same. I will organize experiments as follows:
 
 1. Train the model using the original script (``lenet_pytorch.py``, although I made some modifications there).
 2. Perform evaluation of the model using the metrics defined above.
@@ -34,13 +34,17 @@ I will perform experiments on pruning using the saved model.
 4. In order to perform pruning experiments I added:
     - ``metrics/``
     - ``experiments.py`` (this is the main script that produces results).
-    - ``loaders.py`` to create train/test loaders
-    - ``maskedLayers.py`` wrappers for Linear and Conv2d PyTorch modules.
     - ``pruning_loop.py`` implements the experiment.
+    - ``utils``
+    
+      - ``avg_speed_clac.py`` to calculate average inference time on train data
+      - ``loaders.py`` to create train/test loaders
+      - ``maskedLayers.py`` wrappers for Linear and Conv2d PyTorch modules.
+      - ``plot.ipynb`` Jupyter notebook to produce the plots below.
 
 ## Pruning setup
 
-As suggested in the [What is the State of Neural Network Pruning?](https://arxiv.org/abs/2003.03033) paper pruning methods go through the following algorithm:
+As suggested in the [What is the State of Neural Network Pruning?](https://arxiv.org/abs/2003.03033) paper many pruning methods are described by the following algorithm:
 
 1. Initial complete neural network (NN) is trained until convergence (20 epochs now).
 2. ```
@@ -49,7 +53,7 @@ As suggested in the [What is the State of Neural Network Pruning?](https://arxiv
         finetune NN
     end for```
 
-It means that the neural network is pruned several times. In my version, a weight once set as zero will always stay zero. Note also that finetuning means that there are several epochs of training happening. In order to fix the pruning setup, in all experiments number of prune-finetune epochs is equal to 3 (it is ``K`` above), and number of finetuning epochs is equal to 4. The categorical accuracy and model's speed-ups and compression is reported after pruning-finetuning is finished.
+It means that the neural network is pruned several times. In my version, a weight once set as zero will always stay zero. Note also that finetuning means that there are several epochs of training happening. The weights that were pruned are not retrained. In order to fix the pruning setup, in all experiments number of prune-finetune epochs is equal to 3 (it is ``K`` above), and number of finetuning epochs is equal to 4. The categorical accuracy and model's speed-ups and compression is reported after pruning-finetuning is finished.
 
 ## Results
 
@@ -65,11 +69,11 @@ LeNet model as defined in the code was trained for ``80`` epochs, and the best m
 
 #### Experiment 2: Unstructured pruning of most smallest weights (based on the L1 norm)
 
-**Setting:** Same as in experiment 1. Notice the change that now pruning is not random. Here I assign 0's to the most smallest weights.
+**Setting:** Same as in experiment 1. Notice the change that now pruning is not random. Here I assign 0's to the smallest weights.
 
 #### Experiment 3: Structured pruning (based on the L1 norm)
 
-**Setting:** Here I use structured pruning. In PyTorch one can use ``prune.ln_structured`` for that. It is possible to pass a dimension (``dim``) to specify which channel should be dropped. For fully-connected layers as ``fc1`` or ``fc2`` -> ``dim==0`` corresponds to "switching off" output neurons (like ``320`` for ``fc1`` and ``10`` for ``fc2``). Therefore, it does not really make sense to switch off neurons in the classification layer ``fc2``. For convolutional layers like ``conv1`` or ``conv2`` -> ``dim==0`` corresponds to removing the output channels of the layers (like ``10`` for ``conv1`` and ``20`` for ``conv2``). That's why I will only prune ``fc1``, ``conv1`` and ``conv2`` layers, again going from pruning 10% of the layers channels up to 70%. For instance, for the fully-connected layers it means zeroing 5 up to 35 neurons out of 50. For ``conv1`` layer it means zeroing out all the connections corresponding to 1 up to 7 channels.
+**Setting:** Here I use structured pruning. In PyTorch one can use ``prune.ln_structured`` for that. It is possible to pass a dimension (``dim``) to specify which channel should be dropped. For fully-connected layers as ``fc1`` or ``fc2`` -> ``dim=0`` corresponds to "switching off" output neurons (like ``320`` for ``fc1`` and ``10`` for ``fc2``). Therefore, it does not really make sense to switch off neurons in the classification layer ``fc2``. For convolutional layers like ``conv1`` or ``conv2`` -> ``dim=0`` corresponds to removing the output channels of the layers (like ``10`` for ``conv1`` and ``20`` for ``conv2``). That's why I will only prune ``fc1``, ``conv1`` and ``conv2`` layers, again going from pruning 10% of the layers channels up to 70%. For instance, for the fully-connected layers it means zeroing 5 up to 35 neurons out of 50. For ``conv1`` layer it means zeroing out all the connections corresponding to 1 up to 7 channels.
 
 Below I present results of my pruning experiments:
 
@@ -102,7 +106,7 @@ One can have speed-ups when using structured pruning, that is, for example, drop
 
 ## Additional chapter: Knowledge distillation
 
-Knowledge distillation is the idea proposed by Geoffrey Hinton, Oriol Vinyals and Jeff Dean to tranfer knowledge from a huge trained model to a simple and light-weighted one. It is not strictly speaking pruning, but has the same objective: simplify the original neural network without sacrifying much of quality.
+Knowledge distillation is the idea proposed by Geoffrey Hinton, Oriol Vinyals and Jeff Dean to tranfer knowledge from a huge trained model to a simple and light-weighted one. It is not pruning strictly speaking, but has the same objective: simplify the original neural network without sacrifying much of quality.
 
 It works the following way:
 
