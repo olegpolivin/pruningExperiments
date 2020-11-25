@@ -4,8 +4,8 @@ import torch.nn.functional as F
 import torch.nn.utils.prune as prune
 import torch.optim as optim
 
-from loaders import get_loaders
-from maskedLayers import Conv2dMasked, LinearMasked
+from utils.loaders import get_loaders
+from utils.maskedLayers import Conv2dMasked, LinearMasked
 from metrics import flops, model_size
 
 

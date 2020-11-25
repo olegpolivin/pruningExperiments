@@ -1,7 +1,7 @@
 import numpy as np
 from torch import nn
 
-from maskedLayers import Conv2dMasked, LinearMasked
+from utils.maskedLayers import Conv2dMasked, LinearMasked
 
 from . import nonzero
 from .abstract_flops import conv2d_flops, dense_flops
