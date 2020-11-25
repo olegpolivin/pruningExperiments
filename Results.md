@@ -61,21 +61,23 @@ LeNet model as defined in the code was trained for ``80`` epochs, and the best m
 
 #### Experiment 1: Unstructured pruning of random weights
 
-Setting: Prune fully-connected layers (``fc1``, ``fc2``) and both convolutional layers (``conv1``, ``conv2``). Increase pruning from 10% to 70% (step = 10%). The pruning percentage is given for each layer. Roughly it corresponds to compressing the model up to 36 times.
+**Setting:** Prune fully-connected layers (``fc1``, ``fc2``) and both convolutional layers (``conv1``, ``conv2``). Increase pruning from 10% to 70% (step = 10%). The pruning percentage is given for each layer. Roughly it corresponds to compressing the model up to 36 times.
 
 #### Experiment 2: Unstructured pruning of most smallest weights (based on the L1 norm)
 
-Setting: Same as in experiment 1. Notice the change that now pruning is not random. Here I assign 0's to the most smallest weights.
+**Setting:** Same as in experiment 1. Notice the change that now pruning is not random. Here I assign 0's to the most smallest weights.
 
 #### Experiment 3: Structured pruning (based on the L1 norm)
 
-Setting: Here I use structured pruning. In PyTorch one can use ``prune.ln_structured`` for that. It is possible to pass a dimension (``dim``) to specify which channel should be dropped. For fully-connected layers as ``fc1`` or ``fc2`` -> ``dim==0`` corresponds to "switching off" output neurons (like ``320`` for ``fc1`` and ``10`` for ``fc2``). Therefore, it does not really make sense to switch off neurons in the classification layer ``fc2``. For convolutional layers like ``conv1`` or ``conv2`` -> ``dim==0`` corresponds to removing the output channels of the layers (like ``10`` for ``conv1`` and ``20`` for ``conv2``). That's why I will only prune ``fc1``, ``conv1`` and ``conv2`` layers, again going from pruning 10% of the layers channels up to 70%. For instance, for the fully-connected layers it means zeroing 5 up to 35 neurons out of 50. For ``conv1`` layer it means zeroing out all the connections corresponding to 1 up to 7 channels.
+**Setting:** Here I use structured pruning. In PyTorch one can use ``prune.ln_structured`` for that. It is possible to pass a dimension (``dim``) to specify which channel should be dropped. For fully-connected layers as ``fc1`` or ``fc2`` -> ``dim==0`` corresponds to "switching off" output neurons (like ``320`` for ``fc1`` and ``10`` for ``fc2``). Therefore, it does not really make sense to switch off neurons in the classification layer ``fc2``. For convolutional layers like ``conv1`` or ``conv2`` -> ``dim==0`` corresponds to removing the output channels of the layers (like ``10`` for ``conv1`` and ``20`` for ``conv2``). That's why I will only prune ``fc1``, ``conv1`` and ``conv2`` layers, again going from pruning 10% of the layers channels up to 70%. For instance, for the fully-connected layers it means zeroing 5 up to 35 neurons out of 50. For ``conv1`` layer it means zeroing out all the connections corresponding to 1 up to 7 channels.
 
 Below I present results of my pruning experiments:
 
 ![Pruning results were here](imgs/pruningResults.png "Pruning Results")
 
-## Caveats
+And I confirm that using average time of running a model during inference, there is no real change in terms of time for pruned or non-pruned models.
+
+## Conclusions and caveats
 
 Here are my thoughts on the results above and some caveats.
 
@@ -88,9 +90,9 @@ Here are my thoughts on the results above and some caveats.
 
 4. To my understanding one needs to change the architecture of the neural network according to the zeroed weights in order to really have gains in speed and memory.
 
-5. See the discussion here [How to improve inference time of pruned model using torch.nn.utils.prune](https://discuss.pytorch.org/t/how-to-improve-inference-time-of-pruned-model-using-torch-nn-utils-prune/78633/4)
+5. There is a different way which is to use sparse matrices and operations in PyTorch. But this functionality is in beta. See the discussion here [How to improve inference time of pruned model using torch.nn.utils.prune](https://discuss.pytorch.org/t/how-to-improve-inference-time-of-pruned-model-using-torch-nn-utils-prune/78633/4)
 
-6. So, if we do unstructured pruning, we will have to write code for inference to take into account sparse matrices. Here is an example of a paper where authors could get large speed-ups but when the introduced operations with sparse matrices on FPGA. [How Can We Be So Dense? The Benefits of Using Highly Sparse Representations](https://arxiv.org/abs/1903.11257)
+6. So, if we do unstructured pruning and we want to make use of sparse operations, we will have to write code for inference to take into account sparse matrices. Here is an example of a paper where authors could get large speed-ups but when the introduced operations with sparse matrices on FPGA. [How Can We Be So Dense? The Benefits of Using Highly Sparse Representations](https://arxiv.org/abs/1903.11257)
 
 What's said above is more relevant to unstructured pruning of weights.
 
@@ -99,7 +101,7 @@ What's said above is more relevant to unstructured pruning of weights.
 One can have speed-ups when using structured pruning, that is, for example, dropping some channels. The price for that would be a drop in accuracy, but at least this really works for better model size and speed-ups.
 
 
-## Literature
+## Bibliography with comments
 
 1. The code to calculate FLOPs is taken from [ShrinkBench repo](https://github.com/JJGO/shrinkbench) written by the authors of the [What is the State of Neural Network Pruning?](https://arxiv.org/abs/2003.03033) paper. The authors are Davis Blalock, Jose Javier Gonzalez Ortiz, Jonathan Frankle and John Guttag. They created this code to allow researchers to compare pruning algorithms: that is, compare compression rates, speed-ups and quality of the model after pruning among others. I copy their way to measure ``FLOPs`` and ``model size`` which is located in the ``metrics`` folder. It is necessary to say that I made some modifications to the code, and all errors remain mine and should not be attributed to the author's code. It is also important to add that I also take the logic of evaluating pruned models from this paper. All in all, this is the main source of inspiration for my research.
 

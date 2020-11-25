@@ -137,7 +137,9 @@ class PruningExperiment:
 
         optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.5)
 
-        train_loader, test_loader = get_loaders(batch_size_train, batch_size_test)
+        train_loader, test_loader = get_loaders(
+            batch_size_train,
+            batch_size_test)
 
         print("Pruning cycle")
         print("=======================")
