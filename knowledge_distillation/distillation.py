@@ -1,10 +1,19 @@
+import os
+import sys
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from student import LeNet, LeNetStudent
 
-from loaders import get_loaders
+PACKAGE_PARENT = ".."
+SCRIPT_DIR = os.path.dirname(
+    os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__)))
+)
+sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
+
 from metrics import flops, model_size
+from utils.loaders import get_loaders
 
 
 def train(teacher, student, loss_fn, optimizer, data_loader, device):
@@ -92,9 +101,9 @@ if __name__ == "__main__":
     teacher.load_state_dict(torch.load("models/best_acc.pth"))
     student.load_state_dict(torch.load("models/best_acc_student.pth"))
 
-    batch_size_train = 512
+    batch_size_train = 1024
     batch_size_test = 1024
-    nb_epoch = 20
+    nb_epoch = 40
 
     train_loader, test_loader = get_loaders(batch_size_train, batch_size_test)
 
@@ -102,7 +111,8 @@ if __name__ == "__main__":
     print(calculate_prune_metrics(student, test_loader, device))
 
     loss_fn = CrossEntropyLossTemperature_withSoftTargets(1)
-    optimizer = torch.optim.Adam(student.parameters(), lr=0.0001, weight_decay=0.00001)
+    # optimizer = torch.optim.Adam(student.parameters(), lr=0.0001, weight_decay=0.00001)
+    optimizer = torch.optim.SGD(student.parameters(), lr=0.01, momentum=0.2)
 
     best_model = None
     best_acc = 0

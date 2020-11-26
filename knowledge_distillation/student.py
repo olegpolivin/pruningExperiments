@@ -24,17 +24,19 @@ class LeNet(nn.Module):
 class LeNetStudent(nn.Module):
     def __init__(self):
         super().__init__()
-        self.conv1 = nn.Conv2d(1, 6, kernel_size=2)
-        self.bn = nn.BatchNorm2d(6)
-        self.relu = nn.ReLU()
+        # kernel_size = 2 was too strong, so 4
+        self.conv1 = nn.Conv2d(1, 3, kernel_size=4)
+        # Model with batchnorm was too strong reaching 0.973 accuracy
+        # so I switched it off
+        # self.bn = nn.BatchNorm2d(6)
         self.flatten = nn.Flatten()
-        self.fc2 = nn.Linear(1014, 10)
+        self.fc2 = nn.Linear(1875, 10)
 
     def forward(self, x):
         x = self.conv1(x)
-        x = self.bn(x)
-        x = F.relu(x)
-        x = F.max_pool2d(x, 2)
+        # x = self.bn(x)
+        # x = F.relu(x)
+        # x = F.max_pool2d(x, 2)
         x = self.flatten(x)
         x = self.fc2(x)
         return x

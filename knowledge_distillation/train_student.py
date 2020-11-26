@@ -1,9 +1,21 @@
+import os
+import sys
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from student import LeNetStudent
 
-from loaders import get_loaders
+# To make relative imports work
+# See https://stackoverflow.com/questions/16981921/relative-imports-in-python-3
+
+PACKAGE_PARENT = ".."
+SCRIPT_DIR = os.path.dirname(
+    os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__)))
+)
+sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
+
+from utils.loaders import get_loaders
 
 
 def train(net, loss_fn, optimizer, data_loader, device):
@@ -42,7 +54,7 @@ if __name__ == "__main__":
 
     batch_size_train = 512
     batch_size_test = 1024
-    nb_epoch = 20
+    nb_epoch = 60
 
     train_loader, test_loader = get_loaders(batch_size_train, batch_size_test)
 

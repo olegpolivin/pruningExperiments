@@ -1,6 +1,6 @@
 # Experiments in Neural Network pruning
 
-### Prepared by Oleg Polivin, 25 November 2020
+### Prepared by Oleg Polivin, 26 November 2020
 ---
 
 Let's define metrics that we will use to evaluate the effectiveness of pruning. We will look at categorical accuracy to estimate the quality of a neural network.<sup>[1](#myfootnote1)</sup> Accuracy in the experiments is reported based on the test set, not the one that has been used for training the neural network.
@@ -8,7 +8,7 @@ Let's define metrics that we will use to evaluate the effectiveness of pruning. 
 
 Much of this work is based on the paper [What is the State of Neural Network Pruning?](https://arxiv.org/abs/2003.03033)
 
-And to estimate the effectiveness at pruning we will take into account:
+In order to estimate the effectiveness at pruning we will take into account:
 
 1. Acceleration of inference on the test set.
    - Compare the number of multiply-adds operations (FLOPs) to perform inference.
@@ -36,7 +36,7 @@ I will perform experiments on pruning using the saved model.
     - ``experiments.py`` (this is the main script that produces results).
     - ``pruning_loop.py`` implements the experiment.
     - ``utils``
-    
+
       - ``avg_speed_clac.py`` to calculate average inference time on train data
       - ``loaders.py`` to create train/test loaders
       - ``maskedLayers.py`` wrappers for Linear and Conv2d PyTorch modules.
@@ -46,14 +46,16 @@ I will perform experiments on pruning using the saved model.
 
 As suggested in the [What is the State of Neural Network Pruning?](https://arxiv.org/abs/2003.03033) paper many pruning methods are described by the following algorithm:
 
-1. Initial complete neural network (NN) is trained until convergence (20 epochs now).
+1. A neural network (NN) is trained until convergence (20 epochs now).
 2. ```
     for i in 1 to K do
         prune NN
         finetune NN
-    end for```
+    end for
 
-It means that the neural network is pruned several times. In my version, a weight once set as zero will always stay zero. Note also that finetuning means that there are several epochs of training happening. The weights that were pruned are not retrained. In order to fix the pruning setup, in all experiments number of prune-finetune epochs is equal to 3 (it is ``K`` above), and number of finetuning epochs is equal to 4. The categorical accuracy and model's speed-ups and compression is reported after pruning-finetuning is finished.
+It means that the neural network is pruned several times. In my version, a weight once set as zero will always stay zero. The weights that were pruned are not retrained. Note also that finetuning means that there are several epochs of training happening.
+
+In order to fix the pruning setup, in all the experiments number of prune-finetune epochs is equal to 3 (it is ``K`` above), and number of finetuning epochs is equal to 4. The categorical accuracy and model's speed-ups and compression is reported after pruning-finetuning is finished.
 
 ## Results
 
@@ -67,7 +69,7 @@ LeNet model as defined in the code was trained for ``80`` epochs, and the best m
 
 **Setting:** Prune fully-connected layers (``fc1``, ``fc2``) and both convolutional layers (``conv1``, ``conv2``). Increase pruning from 10% to 70% (step = 10%). The pruning percentage is given for each layer. Roughly it corresponds to compressing the model up to 36 times.
 
-#### Experiment 2: Unstructured pruning of most smallest weights (based on the L1 norm)
+#### Experiment 2: Unstructured pruning of the smallest weights (based on the L1 norm)
 
 **Setting:** Same as in experiment 1. Notice the change that now pruning is not random. Here I assign 0's to the smallest weights.
 
@@ -85,6 +87,10 @@ And I confirm that using average time of running a model during inference, there
 
 Here are my thoughts on the results above and some caveats.
 
+If we take the results at face value, we conclude that better results are obtained when we do unstructured pruning of the smallest weights based on L1 norm. In reality however (more on that below) unstructured pruning makes weights sparse, but since sparse operations are not supported in PyTorch yet, it does not bring real gains in terms of model size or speed of inference. However, we can think of such results as some evidence that a smaller architecture with a lower number of weights might be beneficial.
+
+Below are further caveats:
+
 ### Unstructured pruning
 1. We are looking at FLOPs to estimate a speed-up of a pruned neural network. We look at the number of non-null parameters to estimate compression. It gives us an impression that by doing pruning we gain a significant speed-up and memory gain.
 
@@ -96,7 +102,7 @@ Here are my thoughts on the results above and some caveats.
 
 5. There is a different way which is to use sparse matrices and operations in PyTorch. But this functionality is in beta. See the discussion here [How to improve inference time of pruned model using torch.nn.utils.prune](https://discuss.pytorch.org/t/how-to-improve-inference-time-of-pruned-model-using-torch-nn-utils-prune/78633/4)
 
-6. So, if we do unstructured pruning and we want to make use of sparse operations, we will have to write code for inference to take into account sparse matrices. Here is an example of a paper where authors could get large speed-ups but when the introduced operations with sparse matrices on FPGA. [How Can We Be So Dense? The Benefits of Using Highly Sparse Representations](https://arxiv.org/abs/1903.11257)
+6. So, if we do unstructured pruning and we want to make use of sparse operations, we will have to write code for inference to take into account sparse matrices. Here is an example of a paper where authors could get large speed-ups but when they introduced operations with sparse matrices on FPGA. [How Can We Be So Dense? The Benefits of Using Highly Sparse Representations](https://arxiv.org/abs/1903.11257)
 
 What's said above is more relevant to unstructured pruning of weights.
 
@@ -118,9 +124,11 @@ It works the following way:
 I provide the code to do it in the ``knowledge_distillation`` folder. Run
 
 ```
-python knowledge_distillation/train_student.py 
+python knowledge_distillation/train_student.py
 ```
-to train the student network. It has a simplified architecture relative to the original ``LeNet`` neural network. For example, when the trained student network is saved it takes twice less memory on disk (from 90 kBs to 45 kBs). Run
+to train the student network. It has a simplified architecture relative to the original ``LeNet`` neural network. For example, when the trained student network is saved it takes 1.16 times less memory on disk (from 90 kBs to 77 kBs, even twice less if saved in ``PyTorch v1.4``). I ran training for 60 epochs and the best accuracy was reached on epoch 47, and it equals ``0.9260``. Thus we can say that the model has converged.
+
+Run
 
 ```
 python knowledge_distillation/distillation.py
@@ -128,15 +136,15 @@ python knowledge_distillation/distillation.py
 to do additional training of the converged student neural network distilling teacher network.
 
 Here are the results:
-- ``FLOPS`` compression coefficient is 32 (the student model is 32 times smaller in terms of FLOPS).
-- ``Model size`` compression coefficient is 2 (the student model is 2 times smaller in terms of size)
-- ``Accuracy`` of the retrained student model is 0.9718, only ~ 1% lower than the original one.
+- ``FLOPS`` compression coefficient is 42 (the student model is 42 times smaller in terms of FLOPS, down to 21840 multiply-add operations from 932500).
+- ``Model size`` compression coefficient is 3 (the student model is 3 times smaller in terms of size)
+- ``Accuracy`` of the retrained student model is ``0.9276``, which is a tiny bit better than the original student network.
 
 I would say that knowledge distillation is definitely worth a try as a method to perform model compression.
 
 ## Bibliography with comments
 
-1. The code to calculate FLOPs is taken from [ShrinkBench repo](https://github.com/JJGO/shrinkbench) written by the authors of the [What is the State of Neural Network Pruning?](https://arxiv.org/abs/2003.03033) paper. The authors are Davis Blalock, Jose Javier Gonzalez Ortiz, Jonathan Frankle and John Guttag. They created this code to allow researchers to compare pruning algorithms: that is, compare compression rates, speed-ups and quality of the model after pruning among others. I copy their way to measure ``FLOPs`` and ``model size`` which is located in the ``metrics`` folder. It is necessary to say that I made some modifications to the code, and all errors remain mine and should not be attributed to the author's code. It is also important to add that I also take the logic of evaluating pruned models from this paper. All in all, this is the main source of inspiration for my research.
+1. The code to calculate FLOPs is taken from [ShrinkBench repo](https://github.com/JJGO/shrinkbench) written by the authors of the [What is the State of Neural Network Pruning?](https://arxiv.org/abs/2003.03033) paper. The authors are Davis Blalock, Jose Javier Gonzalez Ortiz, Jonathan Frankle and John Guttag. They created this code to allow researchers to compare pruning algorithms: that is, compare compression rates, speed-ups and quality of the model after pruning among others. I copy their way to measure ``FLOPs`` and ``model size`` which is located in the ``metrics`` folder. It is necessary to say that I made some minor modifications to the code, and all errors remain mine and should not be attributed to the author's code. It is also important to add that I also take the logic of evaluating pruned models from this paper. All in all, this is the main source of inspiration for my research.
 
 2. The next important source is this [Neural Network Pruning PyTorch Implementation](https://github.com/wanglouis49/pytorch-weights_pruning) by Luyu Wang and Gavin Ding. I copy their code for implementing the high-level idea of doing pruning:
    - Write wrappers on PyTorch Linear and Conv2d layers.
